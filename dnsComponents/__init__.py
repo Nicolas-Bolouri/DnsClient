@@ -1,3 +1,3 @@
-from dnsHeader import DNSHeader
-from dnsQuestion import DNSQuestion
-from dnsAnswer import DNSAnswer
+from .dnsHeader import DNSHeader, DNSFlags
+from .dnsQuestion import DNSQuestion
+from .dnsAnswer import DNSAnswer
