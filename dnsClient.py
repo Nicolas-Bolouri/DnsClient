@@ -5,6 +5,20 @@ import re
 from dnsComponents import DNSHeader, DNSQuestion, DNSAnswer, DNSFlags
 
 def parse_arguments(argv):
+    """
+    Parses the command-line arguments to configure the DNS client.
+    
+    Args:
+        argv (list): A list of command-line arguments provided to the DNS client.
+    
+    Returns:
+        dict: A dictionary containing the parsed options, including timeout, max retries,
+              port, query type, server, and name.
+              
+    Raises:
+        SystemExit: If the input syntax is incorrect, unexpected arguments are found, or 
+                    required arguments (server or name) are missing.
+    """
     options = {
         'timeout': 5,
         'max_retries': 3,
@@ -55,12 +69,10 @@ def parse_arguments(argv):
         elif options['name'] is None and not arg.startswith('-'):
             options['name'] = arg
         else:
-            # Unexpected argument
             print(f"ERROR\tUnexpected argument: {arg}")
             sys.exit(1)
         i += 1
 
-    # Check that server and name are provided
     if options['server'] is None or options['name'] is None:
         print("ERROR\tIncorrect input syntax: Missing server or name")
         sys.exit(1)
@@ -68,7 +80,30 @@ def parse_arguments(argv):
     return options
 
 class DNSClient:
+    """
+    Represents a DNS client that sends DNS queries and processes responses.
+    
+    Attributes:
+        server (str): The IP address of the DNS server to query.
+        name (str): The domain name to resolve.
+        query_type (str): The type of DNS query (e.g., 'A', 'MX', 'NS').
+        timeout (int): The timeout duration in seconds for each query attempt.
+        max_retries (int): The maximum number of retries if the query times out.
+        port (int): The port number to use for the DNS query (default is 53).
+    """
+    
     def __init__(self, server, name, query_type='A', timeout=5, max_retries=3, port=53):
+        """
+        Initializes the DNSClient object with the server, name, and configuration options.
+        
+        Args:
+            server (str): The IP address of the DNS server to query.
+            name (str): The domain name to resolve.
+            query_type (str): The type of DNS query (default is 'A').
+            timeout (int): Timeout duration in seconds for each query attempt (default is 5).
+            max_retries (int): Maximum number of retries on timeout (default is 3).
+            port (int): The port number for the DNS query (default is 53).
+        """
         self.server = server
         self.name = name
         self.query_type = query_type
@@ -77,6 +112,13 @@ class DNSClient:
         self.port = port
 
     def send_query(self):
+        """
+        Sends a DNS query to the server and handles the response, retrying on timeout.
+        
+        Raises:
+            socket.timeout: If the server does not respond within the timeout duration.
+            Exception: If any other error occurs while sending or receiving the DNS query.
+        """
         retries = 0
         response_received = False
 
@@ -125,15 +167,23 @@ class DNSClient:
                 sock.close()
 
     def parse_response(self, data, request_header):
+        """
+        Parses the DNS response received from the server and checks for errors.
+        
+        Args:
+            data (bytes): The raw DNS response data received from the server.
+            request_header (DNSHeader): The DNSHeader from the original request for validation.
+        
+        Prints:
+            The answer section, additional section, and any errors encountered during the parsing process.
+        """
         header = DNSHeader.unpack(data[:12])
         flags = header.flags
 
-        # Check transaction ID
         if header.trans_id != request_header.trans_id:
             print("ERROR\tUnexpected response: Request ID and Response ID do not match.")
             return
 
-        # Check RCODE
         rcode = flags.rcode
         if rcode == 1:
             print("ERROR\tFormat error: the name server was unable to interpret the query")
@@ -173,7 +223,6 @@ class DNSClient:
         for answer in answers:
             print(answer.__str__(auth_bit=auth_bit))
 
-        # Parse additional section if present
         if header.ar_count > 0:
             print(f"\n***Additional Section ({header.ar_count} records)***\n")
             for _ in range(header.ar_count):
@@ -181,8 +230,10 @@ class DNSClient:
                 print(answer.__str__(auth_bit=auth_bit))
 
 def main():
+    """
+    The main entry point of the DNS client. It parses arguments, validates input, and initiates the DNS query.
+    """
     options = parse_arguments(sys.argv[1:])
-    # Validate server IP
     server_ip = options['server']
     if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', server_ip):
         print("ERROR\tInvalid DNS server provided. The server should be a valid IPv4 address.")

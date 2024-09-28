@@ -2,7 +2,26 @@ import struct
 import socket
 
 class DNSAnswer:
+    """
+    Represents a DNS answer resource record in a DNS response.
+    
+    This class handles the parsing and string representation of DNS resource records 
+    such as A, NS, CNAME, and MX records.
+    """
+
     def __init__(self, name, rr_type, rr_class, ttl, rdlength, rdata):
+        """
+        Initializes the DNSAnswer object.
+        
+        Args:
+            name (str): The domain name for which the answer is provided.
+            rr_type (int): The resource record type (e.g., 1 for A record, 2 for NS, etc.).
+            rr_class (int): The resource record class (e.g., 1 for IN (Internet)).
+            ttl (int): The time-to-live (TTL) value for this resource record.
+            rdlength (int): The length of the RDATA field.
+            rdata (str or tuple): The RDATA, which depends on the rr_type. It can be an IP address (A), 
+                                  domain name (NS, CNAME), or a tuple (preference, exchange) for MX records.
+        """
         self.name = name        
         self.rr_type = rr_type  
         self.rr_class = rr_class 
@@ -11,6 +30,16 @@ class DNSAnswer:
         self.rdata = rdata     
 
     def __str__(self, auth_bit=None):
+        """
+        Returns a string representation of the DNSAnswer object, including whether the 
+        response is authoritative or non-authoritative.
+        
+        Args:
+            auth_bit (int, optional): A flag indicating whether the response is authoritative (1) or not (0).
+        
+        Returns:
+            str: A formatted string representing the DNS answer record.
+        """
         auth = "nonauth"
         if auth_bit == 1:
             auth = "auth"
@@ -30,8 +59,17 @@ class DNSAnswer:
     @classmethod
     def unpack(cls, data, offset):
         """
-        Unpacks a resource record from the data starting at the given offset.
-        Returns a DNSAnswer instance and the new offset.
+        Unpacks a resource record from the binary data starting at the given offset.
+        
+        Args:
+            data (bytes): The binary data from the DNS response.
+            offset (int): The current offset in the data where the resource record starts.
+        
+        Returns:
+            tuple: A tuple containing the unpacked DNSAnswer instance and the new offset after reading the resource record.
+        
+        Raises:
+            ValueError: If the data is insufficient to unpack the resource record or its RDATA field.
         """
         name, offset = cls.parse_name(data, offset)
 
@@ -70,9 +108,18 @@ class DNSAnswer:
     @staticmethod
     def parse_name(data, offset):
         """
-        Parses a domain name from data starting at the given offset.
-        Handles DNS name compression.
-        Returns the domain name and the new offset.
+        Parses a domain name (QNAME) from the binary data starting at the given offset.
+        This method also handles DNS name compression.
+        
+        Args:
+            data (bytes): The binary data from the DNS response.
+            offset (int): The current offset in the data where the domain name starts.
+        
+        Returns:
+            tuple: A tuple containing the parsed domain name and the new offset after reading the name.
+        
+        Raises:
+            ValueError: If the data is insufficient to parse the name or if the offset exceeds the data length.
         """
         labels = []
         original_offset = offset
@@ -85,7 +132,7 @@ class DNSAnswer:
                 offset += 1
                 break
             elif length & 0xC0 == 0xC0:
-                # Pointer to another part of the message
+                # Pointer to another part of the message (name compression)
                 if not jumped:
                     original_offset = offset + 2
                     jumped = True
