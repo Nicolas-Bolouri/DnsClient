@@ -5,9 +5,6 @@ import re
 from dnsComponents import DNSHeader, DNSQuestion, DNSAnswer, DNSFlags
 
 def parse_arguments(argv):
-    """
-    Parses command-line arguments.
-    """
     options = {
         'timeout': 5,
         'max_retries': 3,
@@ -41,15 +38,24 @@ def parse_arguments(argv):
                 print("ERROR\tIncorrect input syntax: Missing value for -p")
                 sys.exit(1)
         elif arg == '-mx':
+            if options['query_type'] != 'A':
+                print("ERROR\tCannot specify both -mx and -ns")
+                sys.exit(1)
             options['query_type'] = 'MX'
         elif arg == '-ns':
+            if options['query_type'] != 'A':
+                print("ERROR\tCannot specify both -mx and -ns")
+                sys.exit(1)
             options['query_type'] = 'NS'
         elif arg.startswith('@'):
+            if options['server'] is not None:
+                print(f"ERROR\tUnexpected argument: {arg}")
+                sys.exit(1)
             options['server'] = arg[1:]
-        elif options['name'] is None:
+        elif options['name'] is None and not arg.startswith('-'):
             options['name'] = arg
         else:
-            # Extra argument, could be an error
+            # Unexpected argument
             print(f"ERROR\tUnexpected argument: {arg}")
             sys.exit(1)
         i += 1
