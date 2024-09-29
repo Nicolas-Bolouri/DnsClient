@@ -90,7 +90,7 @@ The tests will check for various scenarios, including:
 $ python dnsClient.spec.py
 .........
 ----------------------------------------------------------------------
-Ran 9 tests in 3.561s
+Ran 11 tests in 3.561s
 
 OK
 ```

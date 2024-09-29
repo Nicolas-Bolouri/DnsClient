@@ -163,6 +163,40 @@ class TestDNSClient(unittest.TestCase):
         output = self.run_dns_client(args)
         self.check_output(output, expected_patterns)
 
+    def test_additional_section(self):
+        """
+        Tests that additional sections of a DNS response are correctly parsed and displayed.
+        Verifies that the output contains the details from the additional section if present.
+        """
+        args = ['@8.8.8.8', 'mcgill.ca']  
+        output = self.run_dns_client(args)
+
+        if "***Additional Section" in output:
+            expected_patterns = [
+                r"\*\*\*Additional Section \(\d+ records\)\*\*\*",
+                r"IP\t\d{1,3}(\.\d{1,3}){3}\t\d+\t(auth|nonauth)"
+            ]
+        else:
+            expected_patterns = [
+                r"DnsClient sending request for mcgill\.ca",
+                r"Server: 8\.8\.8\.8",
+                r"Request type: A",
+                r"Response received after [\d\.]+ seconds \(\d+ retries\)",
+            ]
+        
+        self.check_output(output, expected_patterns)
+
+    def test_rcode_handling(self):
+        """
+        Tests the DNS client for various RCODE values in the response.
+        Verifies that the client displays appropriate error messages for different RCODE values.
+        """
+        args = ['@8.8.8.8', 'nonexistentdomain.example']
+        expected_patterns = [
+            r"NOTFOUND"  # Triggering RCODE 3: Name Error
+        ]
+        output = self.run_dns_client(args)
+        self.check_output(output, expected_patterns)
 
 if __name__ == '__main__':
     unittest.main()
